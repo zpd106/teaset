@@ -2,9 +2,9 @@
 
 'use strict';
 
-import React, {Component} from "react";
+import React, {Component, PureComponent} from "react";
 import {StyleSheet, AppRegistry, DeviceEventEmitter, View, Animated} from 'react-native';
-//import {Symbol} from 'core-js';
+import PropTypes from 'prop-types';
 
 import Theme from 'teaset/themes/Theme';
 
@@ -43,17 +43,63 @@ export default class TopView extends Component {
       scaleX: new Animated.Value(1),
       scaleY: new Animated.Value(1),
     };
+    this.handlers = [];
   }
 
-  componentWillMount() {
-    DeviceEventEmitter.addListener("addOverlay", e => this.add(e));
-    DeviceEventEmitter.addListener("removeOverlay", e => this.remove(e));
-    DeviceEventEmitter.addListener("removeAllOverlay", e => this.removeAll(e));
-    DeviceEventEmitter.addListener("transformRoot", e => this.transform(e));
-    DeviceEventEmitter.addListener("restoreRoot", e => this.restore(e));
+  static contextTypes = {
+    registerTopViewHandler: PropTypes.func,
+    unregisterTopViewHandler: PropTypes.func,
+  };
+
+  static childContextTypes = {
+    registerTopViewHandler: PropTypes.func,
+    unregisterTopViewHandler: PropTypes.func,
+  };
+
+  getChildContext() {
+    let {registerTopViewHandler, unregisterTopViewHandler} = this.context;
+    if (!registerTopViewHandler) {
+      registerTopViewHandler = handler => {
+        this.handlers.push(handler);
+      };
+      unregisterTopViewHandler = handler => {
+        for (let i = this.handlers.length - 1; i >= 0; --i) {
+          if (this.handlers[i] === handler) {
+            this.handlers.splice(i, 1);
+            return true;
+          }
+        }
+        return false;
+      }
+    }
+    return {registerTopViewHandler, unregisterTopViewHandler};
+  }
+
+  get handler() {
+    return this.handlers.length > 0 ? this.handlers[this.handlers.length - 1] : this;
+  }
+
+  componentDidMount() {
+    let {registerTopViewHandler} = this.context;
+    if (registerTopViewHandler) {
+      registerTopViewHandler(this);
+      return;
+    }
+
+    DeviceEventEmitter.addListener("addOverlay", e => this.handler.add(e));
+    DeviceEventEmitter.addListener("removeOverlay", e => this.handler.remove(e));
+    DeviceEventEmitter.addListener("removeAllOverlay", e => this.handler.removeAll(e));
+    DeviceEventEmitter.addListener("transformRoot", e => this.handler.transform(e));
+    DeviceEventEmitter.addListener("restoreRoot", e => this.handler.restore(e));
   }
 
   componentWillUnmount() {
+    let {unregisterTopViewHandler} = this.context;
+    if (unregisterTopViewHandler) {
+      unregisterTopViewHandler(this);
+      return;
+    }
+
     DeviceEventEmitter.removeAllListeners("addOverlay");
     DeviceEventEmitter.removeAllListeners("removeOverlay");
     DeviceEventEmitter.removeAllListeners("removeAllOverlay");
@@ -102,19 +148,19 @@ export default class TopView extends Component {
     });
     if (animated) {
       let animates = [
-        Animated.spring(translateX, {toValue: tx, friction: 9}),
-        Animated.spring(translateY, {toValue: ty, friction: 9}),
-        Animated.spring(scaleX, {toValue: sx, friction: 9}),
-        Animated.spring(scaleY, {toValue: sy, friction: 9}),
+        Animated.spring(translateX, {toValue: tx, friction: 9, useNativeDriver: false}),
+        Animated.spring(translateY, {toValue: ty, friction: 9, useNativeDriver: false}),
+        Animated.spring(scaleX, {toValue: sx, friction: 9, useNativeDriver: false}),
+        Animated.spring(scaleY, {toValue: sy, friction: 9, useNativeDriver: false}),
       ];
       animatesOnly ? animatesOnly(animates) : Animated.parallel(animates).start();
     } else {
       if (animatesOnly) {
         let animates = [
-          Animated.timing(translateX, {toValue: tx, duration: 1}),
-          Animated.timing(translateY, {toValue: ty, duration: 1}),
-          Animated.timing(scaleX, {toValue: sx, duration: 1}),
-          Animated.timing(scaleY, {toValue: sy, duration: 1}),
+          Animated.timing(translateX, {toValue: tx, duration: 1, useNativeDriver: false}),
+          Animated.timing(translateY, {toValue: ty, duration: 1, useNativeDriver: false}),
+          Animated.timing(scaleX, {toValue: sx, duration: 1, useNativeDriver: false}),
+          Animated.timing(scaleY, {toValue: sy, duration: 1, useNativeDriver: false}),
         ];
         animatesOnly(animates);
       } else {
@@ -132,19 +178,19 @@ export default class TopView extends Component {
     let {animated, animatesOnly} = e;
     if (animated) {
       let animates = [
-        Animated.spring(translateX, {toValue: 0, friction: 9}),
-        Animated.spring(translateY, {toValue: 0, friction: 9}),
-        Animated.spring(scaleX, {toValue: 1, friction: 9}),
-        Animated.spring(scaleY, {toValue: 1, friction: 9}),
+        Animated.spring(translateX, {toValue: 0, friction: 9, useNativeDriver: false}),
+        Animated.spring(translateY, {toValue: 0, friction: 9, useNativeDriver: false}),
+        Animated.spring(scaleX, {toValue: 1, friction: 9, useNativeDriver: false}),
+        Animated.spring(scaleY, {toValue: 1, friction: 9, useNativeDriver: false}),
       ];
       animatesOnly ? animatesOnly(animates) : Animated.parallel(animates).start();
     } else {
       if (animatesOnly) {
         let animates = [
-          Animated.timing(translateX, {toValue: 0, duration: 1}),
-          Animated.timing(translateY, {toValue: 0, duration: 1}),
-          Animated.timing(scaleX, {toValue: 1, duration: 1}),
-          Animated.timing(scaleY, {toValue: 1, duration: 1}),
+          Animated.timing(translateX, {toValue: 0, duration: 1, useNativeDriver: false}),
+          Animated.timing(translateY, {toValue: 0, duration: 1, useNativeDriver: false}),
+          Animated.timing(scaleX, {toValue: 1, duration: 1, useNativeDriver: false}),
+          Animated.timing(scaleY, {toValue: 1, duration: 1, useNativeDriver: false}),
         ];
         animatesOnly(animates);
       } else {
@@ -162,7 +208,9 @@ export default class TopView extends Component {
     return (
       <View style={{backgroundColor: Theme.screenColor, flex: 1}}>
         <Animated.View style={{flex: 1, transform: transform}}>
-          {this.props.children}
+          <PureView>
+            {this.props.children}
+          </PureView>
         </Animated.View>
         {elements.map((item, index) => {
           return (
@@ -187,6 +235,16 @@ var styles = StyleSheet.create({
     bottom: 0,
   },
 });
+
+class PureView extends PureComponent {
+  render() {
+    return (
+      <View style={{flex: 1}}>
+        {this.props.children}
+      </View>
+    );
+  }
+}
 
 if (!AppRegistry.registerComponentOld) {
   AppRegistry.registerComponentOld = AppRegistry.registerComponent;

@@ -9,13 +9,15 @@ npm install --save teaset
 ```
 
 # Example
-In the Teaset package directory:
+Clone teaset project from github (or download zip file):
 ```
-cd example
+git clone https://github.com/rilyu/teaset.git
+cd teaset/example
 npm install
 ```
 To run example on iOS:
 ```
+cd ios && pod install && cd ..
 react-native run-ios
 ```
 To run example on Android:
@@ -25,11 +27,18 @@ react-native run-android
 **Tips: In the Android system, the animations is not smooth, switch to the release mode can be resolved.**
 
 ## iPhoneX
-Add the following code to support iPhoneX
-```javascript
-Theme.set ({fitIPhoneX: true});
+iPhoneX and iPhoneXS are fully supported after 0.6.0, and this option is **true** by default.
+
+If SafeAreaView is used, please use ```Theme.set({fitIPhoneX: false})``` to manually turn off it.
+
+## Redux
+If you use Redux, you need to use the ```<TopView>``` package container (thanks [@Alexorz](https://github.com/Alexorz) ).
+
 ```
-** Note: This option is false by default, don't open it if SafeAreaView is used. **
+import { TopView } from 'teaset';
+
+container => () => <Provider store={store}><TopView>{container}</TopView></Provider>
+```
 
 # Documentation
 The document is being written, please refer to the example source code.

@@ -8,23 +8,21 @@ import {StyleSheet, TextInput} from 'react-native';
 
 import Theme from 'teaset/themes/Theme';
 
-export default class Input extends TextInput {
+export default class Input extends Component {
 
   static propTypes = {
-    ...TextInput.propTypes,
     size: PropTypes.oneOf(['lg', 'md', 'sm']),
     disabled: PropTypes.bool,
   };
 
   static defaultProps = {
-    ...TextInput.defaultProps,
     size: 'md',
     disabled: false,
     underlineColorAndroid: 'rgba(0, 0, 0, 0)',
   };
 
-  buildProps() {
-    let {style, size, disabled, placeholderTextColor, pointerEvents, opacity, ...others} = this.props;
+  buildStyle() {
+    let {style, size} = this.props;
 
     let borderRadius, fontSize, paddingVertical, paddingHorizontal, height;
     switch (size) {
@@ -61,18 +59,20 @@ export default class Input extends TextInput {
       height: height,
     }].concat(style);
 
-    if (!placeholderTextColor) placeholderTextColor = Theme.inputPlaceholderTextColor;
-    if (disabled) {
-      pointerEvents = 'none';
-      opacity = Theme.inputDisabledOpacity;
-    }
-
-    this.props = {style, size, disabled, placeholderTextColor, pointerEvents, opacity, ...others};
+    return style;
   }
 
   render() {
-    this.buildProps();
-    return super.render();
+    let {style, size, disabled, placeholderTextColor, pointerEvents, opacity, ...others} = this.props;
+    return (
+      <TextInput
+        style={this.buildStyle()}
+        placeholderTextColor={placeholderTextColor ? placeholderTextColor : Theme.inputPlaceholderTextColor}
+        pointerEvents={disabled ? 'none' : pointerEvents}
+        opacity={disabled ? Theme.inputDisabledOpacity : opacity}
+        {...others}
+        />
+    );
   }
 
 }

@@ -18,6 +18,7 @@ export default class OverlayView extends Component {
     overlayOpacity: PropTypes.number,
     overlayPointerEvents: ViewPropTypes.pointerEvents,
     autoKeyboardInsets: PropTypes.bool,
+    closeOnHardwareBackPress: PropTypes.bool, //android only
     onAppearCompleted: PropTypes.func,
     onDisappearCompleted: PropTypes.func,
     onCloseRequest: PropTypes.func, //(overlayView)
@@ -28,6 +29,7 @@ export default class OverlayView extends Component {
     animated: false,
     overlayPointerEvents: 'auto',
     autoKeyboardInsets: false,
+    closeOnHardwareBackPress: true,
   };
 
   constructor(props) {
@@ -42,18 +44,19 @@ export default class OverlayView extends Component {
     }
   }
 
-  componentWillMount() {
+  componentDidMount() {
+    this.appearAfterMount && this.appear();
     if (Platform.OS === 'android') {
       let BackHandler = ReactNative.BackHandler ? ReactNative.BackHandler : ReactNative.BackAndroid;
       this.backListener = BackHandler.addEventListener('hardwareBackPress', () => {
-        this.closeRequest();
-        return true;
+        if (this.props.closeOnHardwareBackPress) {
+          this.closeRequest();
+          return true;          
+        } else {
+          return false;
+        }
       });
     }
-  }
-
-  componentDidMount() {
-    this.appearAfterMount && this.appear();
   }
 
   componentWillUnmount() {
@@ -78,6 +81,7 @@ export default class OverlayView extends Component {
       Animated.timing(this.state.overlayOpacity, {
         toValue: this.overlayOpacity,
         duration,
+        useNativeDriver: false,
       })
     ];
     return animates;
@@ -89,6 +93,7 @@ export default class OverlayView extends Component {
       Animated.timing(this.state.overlayOpacity, {
         toValue: 0,
         duration,
+        useNativeDriver: false,
       })
     ];
     return animates;
@@ -96,6 +101,10 @@ export default class OverlayView extends Component {
 
   get appearAfterMount() {
     return true;
+  }
+
+  get overlayPointerEvents() { //override in Toast
+    return this.props.overlayPointerEvents;
   }
 
   appear(animated = this.props.animated, additionAnimates = null) {
@@ -146,10 +155,10 @@ export default class OverlayView extends Component {
     else if (!modal) this.close();
   }
 
-  buildProps() {
-    let {style, ...others} = this.props;
+  buildStyle() {
+    let {style} = this.props;
     style = [{backgroundColor: 'rgba(0, 0, 0, 0)', flex: 1}].concat(style);
-    this.props = {style, ...others};
+    return style;
   }
 
   renderContent() {
@@ -157,16 +166,14 @@ export default class OverlayView extends Component {
   }
 
   render() {
-    this.buildProps();
-
-    let {style, overlayPointerEvents, autoKeyboardInsets, ...others} = this.props;
+    let {autoKeyboardInsets} = this.props;
     return (
-      <View style={styles.screen} pointerEvents={overlayPointerEvents}>
+      <View style={styles.screen} pointerEvents={this.overlayPointerEvents}>
         <Animated.View
           style={[styles.screen, {backgroundColor: '#000', opacity: this.state.overlayOpacity}]}
           {...this.panResponder.panHandlers}
           />
-        <View style={style} pointerEvents='box-none'>
+        <View style={this.buildStyle()} pointerEvents='box-none'>
           {this.renderContent()}
         </View>
         {autoKeyboardInsets ? <KeyboardSpace /> : null}

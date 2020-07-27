@@ -21,15 +21,16 @@ export default class NavigationBackButton extends NavigationButton {
 
   static defaultProps = {
     ...NavigationButton.defaultProps,
-    icon: {uri: backIcon},
+    icon: require('../../icons/back.png'), //{uri: backIcon}, rn 0.62 bug, see https://github.com/facebook/react-native/issues/28454#issuecomment-606298713
   };
 
-  buildProps() {
-    super.buildProps();
+  buildStyle() {
+    return super.buildStyle().concat({paddingLeft: 0, paddingTop: 8, paddingBottom: 8});
+  }
 
-    let {style, title, icon, children, ...others} = this.props;
+  renderTitle() {
+    let {title, icon} = this.props;
 
-    style = style.concat({paddingLeft: 0, paddingTop: 8, paddingBottom: 8});
     let textStyle = {
       color: this.context.tintColor,
       fontSize: Theme.navButtonFontSize,
@@ -40,13 +41,12 @@ export default class NavigationBackButton extends NavigationButton {
       width: 20,
       height: 20,
     };
-
-    children = [
+    let elements = [
       <Image key={'icon'} style={iconStyle} source={icon} />,
       <Text key={'title'} style={textStyle} numberOfLines={1} allowFontScaling={false}>{title}</Text>,
     ];
 
-    this.props = {style, title, icon, children, ...others};
+    return elements;
   }
 
 }

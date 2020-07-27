@@ -4,7 +4,7 @@
 
 import React, {Component} from "react";
 import PropTypes from 'prop-types';
-import {StyleSheet, View, Image, Animated} from 'react-native';
+import {StyleSheet, View, Image, Animated, Easing} from 'react-native';
 import resolveAssetSource from 'react-native/Libraries/Image/resolveAssetSource';
 
 import Theme from 'teaset/themes/Theme';
@@ -49,23 +49,23 @@ export default class AlbumSheet extends TransformView {
   }
 
   componentDidMount() {
-    this.loadImage(this.props);
+    this.loadImage();
   }
 
-  componentWillReceiveProps(nextProps) {
-    if (nextProps.image != this.props.image || nextProps.load != this.props.load) {
-      this.loadImage(nextProps);
+  componentDidUpdate(prevProps) {
+    if (prevProps.image != this.props.image || prevProps.load != this.props.load) {
+      this.loadImage();
     }
   }
 
-  loadImage(props) {
-    let {image, thumb, load, onWillLoadImage, onLoadImageSuccess, onLoadImageFailure} = props;
+  loadImage() {
+    let {image, thumb, load, onWillLoadImage, onLoadImageSuccess, onLoadImageFailure} = this.props;
     let {imageLoaded, thumbLoaded} = this.state;
 
     if (!load) return;
 
     if (React.isValidElement(image)) {
-      let {width, height} = this.getElementSize(props.image);
+      let {width, height} = this.getElementSize(image);
       this.imageSizeChange(width, height);
       this.setState({imageLoaded: true});
     } else {
@@ -185,13 +185,17 @@ export default class AlbumSheet extends TransformView {
     } else {
       if (animated) {
         Animated.parallel([
-          Animated.spring(translateX, {
+          Animated.timing(translateX, {
             toValue: valueX,
-            friction: 9,
+            easing: Easing.elastic(0),
+            duration: 200,
+            useNativeDriver: false,
           }),
-          Animated.spring(translateY, {
+          Animated.timing(translateY, {
             toValue: valueY,
-            friction: 9,
+            easing: Easing.elastic(0),
+            duration: 200,
+            useNativeDriver: false,
           }),          
         ]).start();
       } else {
@@ -213,9 +217,11 @@ export default class AlbumSheet extends TransformView {
     toValue += x;
 
     if (animated) {
-      Animated.spring(translateX, {
+      Animated.timing(translateX, {
         toValue: toValue,
-        friction: 9,
+        easing: Easing.elastic(0),
+        duration: 200,
+        useNativeDriver: false,
       }).start();
     } else {
       translateX.setValue(toValue);
@@ -267,11 +273,19 @@ export default class AlbumSheet extends TransformView {
     });
   }
 
-  buildProps() {
-    let {style, image, thumb, load, children, onLayout, ...others} = this.props;
-    let {position, imageLoaded, thumbLoaded, fitWidth, fitHeight} = this.state;
+  buildStyle() {
+    return [{backgroundColor: 'rgba(0, 0, 0, 0)'}].concat(super.buildStyle());
+  }
 
-    style = [{backgroundColor: 'rgba(0, 0, 0, 0)'}].concat(style);
+  onLayout(e) {
+    let {width, height} = e.nativeEvent.layout;
+    this.layoutChange(width, height);
+    super.onLayout(e);
+  }
+
+  renderContent() {
+    let {image, thumb, children} = this.props;
+    let {position, imageLoaded, thumbLoaded, fitWidth, fitHeight} = this.state;
 
     let childrenStyle = {width: fitWidth, height: fitHeight};
     if (React.isValidElement(image)) {
@@ -284,15 +298,7 @@ export default class AlbumSheet extends TransformView {
       }
     }
 
-    let saveOnLayout = onLayout;
-    onLayout = e => {
-      let {width, height} = e.nativeEvent.layout;
-      this.layoutChange(width, height);
-      saveOnLayout && saveOnLayout(e);
-    };
-
-    this.props = {style, image, thumb, load, children, onLayout, ...others};
-    super.buildProps();
+    return children;
   }
 
 }

@@ -14,9 +14,10 @@ export default class SegmentedBar extends Component {
   static propTypes = {
     ...ViewPropTypes,
     justifyItem: PropTypes.oneOf(['fixed', 'scrollable']),
-    indicatorType: PropTypes.oneOf(['none', 'boxWidth', 'itemWidth']),
+    indicatorType: PropTypes.oneOf(['none', 'boxWidth', 'itemWidth', 'customWidth']),
     indicatorPosition: PropTypes.oneOf(['top', 'bottom']),
     indicatorLineColor: PropTypes.string,
+    indicatorWidth: PropTypes.number,
     indicatorLineWidth: PropTypes.number,
     indicatorPositionPadding: PropTypes.number,
     animated: PropTypes.bool,
@@ -29,6 +30,7 @@ export default class SegmentedBar extends Component {
     ...View.defaultProps,
     justifyItem: 'fixed',
     indicatorType: 'itemWidth',
+    indicatorWidth: 20,
     indicatorPosition: 'bottom',
     animated: true,
     autoScroll: true,
@@ -47,21 +49,20 @@ export default class SegmentedBar extends Component {
     this._scrollViewWidth = 0;
   }
 
-  componentWillReceiveProps(nextProps) {
-    let nextItemsLayout = this.makeArray(this._itemsLayout, nextProps.children);
+  componentDidUpdate(prevProps) {
+    let nextItemsLayout = this.makeArray(this._itemsLayout, this.props.children);
     if (nextItemsLayout.length != this._itemsLayout.length) {
-      this._buttonsLayout = this.makeArray(this._buttonsLayout, nextProps.children);
+      this._buttonsLayout = this.makeArray(this._buttonsLayout, this.props.children);
       this._itemsLayout = nextItemsLayout;
-      this._itemsAddWidth = this.makeArray(this._itemsAddWidth, nextProps.children, 0);
+      this._itemsAddWidth = this.makeArray(this._itemsAddWidth, this.props.children, 0);
     }
-    if (nextProps.activeIndex || nextProps.activeIndex === 0) {
-      this._activeIndex = nextProps.activeIndex;
+    if (this.props.activeIndex || this.props.activeIndex === 0) {
+      this._activeIndex = this.props.activeIndex;
     }
     if (this._activeIndex >= nextItemsLayout.length) {
       this._activeIndex = nextItemsLayout.length - 1;
     }
-   this.props = nextProps;
-   this.updateIndicator();
+    this.updateIndicator();
   }
 
   get activeIndex() {
@@ -83,6 +84,11 @@ export default class SegmentedBar extends Component {
         return this._buttonsLayout[this._activeIndex].x;
       case 'itemWidth':
         return this._buttonsLayout[this._activeIndex].x + this._itemsLayout[this._activeIndex].x + this._itemsAddWidth[this._activeIndex] / 2;
+      case 'customWidth':
+        const isMoreThanDefault = this.props.indicatorWidth > this._itemsLayout[this.activeIndex].width;
+        return isMoreThanDefault ?
+          this._buttonsLayout[this._activeIndex].x + this._itemsLayout[this._activeIndex].x
+          : this._buttonsLayout[this._activeIndex].x + (this._buttonsLayout[this._activeIndex].width - this.props.indicatorWidth) / 2;
     }
     return 0;
   }
@@ -93,6 +99,9 @@ export default class SegmentedBar extends Component {
         return this._buttonsLayout[this.activeIndex].width;
       case 'itemWidth':
         return this._itemsLayout[this.activeIndex].width - this._itemsAddWidth[this._activeIndex];
+      case 'customWidth':
+        const isMoreThanDefault = this.props.indicatorWidth > this._itemsLayout[this.activeIndex].width;
+        return isMoreThanDefault ? this._itemsLayout[this.activeIndex].width : this.props.indicatorWidth;
     }
     return 0;
   }
@@ -130,8 +139,8 @@ export default class SegmentedBar extends Component {
     this._saveIndicatorWidthValue = indicatorWidthValue;
     if (this.props.animated) {
       Animated.parallel([
-        Animated.spring(this._indicatorX, {toValue: indicatorXValue, friction: 9}),
-        Animated.spring(this._indicatorWidth, {toValue: indicatorWidthValue, friction: 9}),
+        Animated.spring(this._indicatorX, {toValue: indicatorXValue, friction: 9, useNativeDriver: false}),
+        Animated.spring(this._indicatorWidth, {toValue: indicatorWidthValue, friction: 9, useNativeDriver: false}),
       ]).start();
     } else {
       this._indicatorX.setValue(indicatorXValue);
@@ -218,7 +227,7 @@ export default class SegmentedBar extends Component {
   }
 
   renderFixed() {
-    let {style, justifyItem, indicatorType, indicatorPosition, indicatorLineColor, indicatorLineWidth, indicatorPositionPadding, animated, activeIndex, onChange, children, ...others} = this.props;
+    let {style, justifyItem, indicatorType, indicatorPosition, indicatorLineColor, indicatorPositionPadding, animated, activeIndex, onChange, children, ...others} = this.props;
     style = [{
       backgroundColor: Theme.sbColor,
       flexDirection: 'row',
@@ -246,7 +255,7 @@ export default class SegmentedBar extends Component {
   }
 
   renderScrollable() {
-    let {style, justifyItem, indicatorType, indicatorPosition, indicatorLineColor, indicatorLineWidth, indicatorPositionPadding, animated, activeIndex, onChange, onLayout, children, ...others} = this.props;
+    let {style, justifyItem, indicatorType, indicatorPosition, indicatorLineColor, indicatorPositionPadding, animated, activeIndex, onChange, onLayout, children, ...others} = this.props;
     style = [{
       backgroundColor: Theme.sbColor,
     }].concat(style);

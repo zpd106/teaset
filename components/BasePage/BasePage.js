@@ -33,20 +33,17 @@ export default class BasePage extends Component {
   constructor(props) {
     super(props);
     this.didMount = false; //代替被废弃的isMounted
+    this.isFocused = false; //this.state.isFocused move to this.isFocused
     this.state = {
-      isFocused: false,
     };
-  }
-
-  componentWillMount() {
-    if (!this.backListener && Platform.OS === 'android') {
-      let BackHandler = ReactNative.BackHandler ? ReactNative.BackHandler : ReactNative.BackAndroid;
-      this.backListener = BackHandler.addEventListener('hardwareBackPress', () => this.onHardwareBackPress());
-    }
   }
 
   componentDidMount() {
     this.didMount = true;
+    if (!this.backListener && Platform.OS === 'android') {
+      let BackHandler = ReactNative.BackHandler ? ReactNative.BackHandler : ReactNative.BackAndroid;
+      this.backListener = BackHandler.addEventListener('hardwareBackPress', () => this.onHardwareBackPress());
+    }
   }
 
   componentWillUnmount() {
@@ -67,7 +64,7 @@ export default class BasePage extends Component {
 
   //Call after the scene transition by Navigator.onDidFocus
   onDidFocus() {
-    if (!this.state.isFocused) this.setState({isFocused: true});
+    this.isFocused = true;
   }
 
   //Call before the scene transition by Navigator.onWillFocus
@@ -86,13 +83,13 @@ export default class BasePage extends Component {
     return false;
   }
 
-  buildProps() {
-    let {style, ...others} = this.props;
+  buildStyle() {
+    let {style} = this.props;
     style = [{
       flex: 1,
       backgroundColor: Theme.pageColor,
     }].concat(style);
-    return ({style, ...others});
+    return style;
   }
 
   renderPage() {
@@ -100,13 +97,12 @@ export default class BasePage extends Component {
   }
 
   render() {
-    let {autoKeyboardInsets, keyboardTopInsets, ...others} = this.buildProps();
+    let {style, children, scene, autoKeyboardInsets, keyboardTopInsets, ...others} = this.props;
     return (
-      <View {...others}>
+      <View style={this.buildStyle()} {...others}>
         {this.renderPage()}
         {autoKeyboardInsets ? <KeyboardSpace topInsets={keyboardTopInsets} /> : null}
       </View>
     );
   }
 }
-

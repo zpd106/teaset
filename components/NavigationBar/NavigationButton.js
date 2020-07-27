@@ -6,14 +6,12 @@ import React, {Component} from 'react';
 import PropTypes from 'prop-types';
 import {TouchableOpacity} from 'react-native';
 
-export default class NavigationButton extends TouchableOpacity {
+export default class NavigationButton extends Component {
 
   static propTypes = {
-    ...TouchableOpacity.propTypes,
   };
 
   static defaultProps = {
-    ...TouchableOpacity.defaultProps,
     hitSlop: {top: 12, bottom: 12, left: 8, right: 8},
   };
 
@@ -21,9 +19,8 @@ export default class NavigationButton extends TouchableOpacity {
     tintColor: PropTypes.string,
   };
 
-  buildProps() {
-    let {style, ...others} = this.props;
-
+  buildStyle() {
+    let {style} = this.props;
     style = [{
       backgroundColor: 'rgba(0, 0, 0, 0)',
       paddingLeft: 6,
@@ -32,13 +29,21 @@ export default class NavigationButton extends TouchableOpacity {
       flexDirection: 'row',
       alignItems: 'center',
     }].concat(style);
+    return style;
+  }
 
-    this.props = {style, ...others};
+  renderTitle() {
+    return this.props.children;
   }
 
   render() {
-    this.buildProps();
-    return super.render();
+    let {style, children, ...others} = this.props;
+    style = this.buildStyle();
+    return (
+      <TouchableOpacity style={style} {...others}>
+        {this.renderTitle()}
+      </TouchableOpacity>
+    );
   }
 
 }

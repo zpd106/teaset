@@ -52,9 +52,9 @@ export default class AlbumView extends Component {
     };
   }
 
-  componentWillReceiveProps(nextProps) {
-    if ((nextProps.index || nextProps.index === 0) && nextProps.index != this.props.index) {
-      this.changeIndex(nextProps.index);
+  componentDidUpdate(prevProps) {
+    if ((this.props.index || this.props.index === 0) && prevProps.index != this.props.index) {
+      this.changeIndex(this.props.index);
     }
   }
 
@@ -83,7 +83,7 @@ export default class AlbumView extends Component {
     if (this.animateActions.length === 0) return;
 
     Animated.parallel(this.animateActions.map((item, index) =>
-      Animated.spring(item.variable, {toValue: item.toValue, friction: 9})
+      Animated.spring(item.variable, {toValue: item.toValue, friction: 9, useNativeDriver: false})
     )).start(e => {
       this.props.onChange && this.props.onChange(newIndex, index);
     });
@@ -96,6 +96,31 @@ export default class AlbumView extends Component {
       item.variable.setValue(item.toValue);
     });
     this.animateActions = [];
+  }
+
+  checkScroll(translateX) {
+    let {images} = this.props;
+    let {index} = this.state;
+
+    let {x, y, width, height} = this.refs['sheet' + index].contentLayout;
+    let ltx = translateX, rtx = translateX;
+    if (width > this.layout.width) {
+      ltx = x;
+      rtx = x + (width - this.layout.width);
+    }
+    let triggerWidth = this.layout.width / 3;
+
+    if ((ltx < triggerWidth && rtx > -triggerWidth)
+      || (ltx >= triggerWidth && index === 0)
+      || (rtx <= -triggerWidth && index === images.length - 1)) {
+      index > 0 && this.refs['sheet' + (index - 1)].scrollX(0, true);
+      index < (images.length - 1) && this.refs['sheet' + (index + 1)].scrollX(0, true);
+      return true;
+    }
+
+    this.changeIndex(ltx >= triggerWidth ? index - 1 : index + 1);
+
+    return false;
   }
 
   // for CarouselControl
@@ -123,31 +148,12 @@ export default class AlbumView extends Component {
     index < (images.length - 1) && this.refs['sheet' + (index + 1)].scrollX(rtx, false);
   }
 
+  onWillInertialMove(translateX, translateY, newX, newY) {
+    return this.checkScroll(newX);
+  }
+
   onWillMagnetic(translateX, translateY, scale, newX, newY, newScale) {
-    let {images} = this.props;
-    let {index} = this.state;
-
-    let {x, y, width, height} = this.refs['sheet' + index].contentLayout;
-    let ltx = translateX, rtx = translateX;
-    if (width > this.layout.width) {
-      ltx = x;
-      rtx = x + (width - this.layout.width);
-    }
-    let triggerWidth = this.layout.width / 3;
-
-    if (scale < 1) {
-      return true;
-    } else if ((ltx < triggerWidth && rtx > -triggerWidth)
-      || (ltx >= triggerWidth && index === 0)
-      || (rtx <= -triggerWidth && index === images.length - 1)) {
-      index > 0 && this.refs['sheet' + (index - 1)].scrollX(0, true);
-      index < (images.length - 1) && this.refs['sheet' + (index + 1)].scrollX(0, true);
-      return true;
-    }
-
-    this.changeIndex(ltx >= triggerWidth ? index - 1 : index + 1);
-
-    return false;
+    return scale < 1 || this.checkScroll(translateX);
   }
 
   renderImage(index) {
@@ -172,6 +178,7 @@ export default class AlbumView extends Component {
         load={index >= this.state.index - 1 && index <= this.state.index + 1}
         onWillTransform={() => this.checkStopScroll()}
         onTransforming={(translateX, translateY, scale) => this.onTransforming(translateX, translateY, scale)}
+        onWillInertialMove={(translateX, translateY, newX, newY) => this.onWillInertialMove(translateX, translateY, newX, newY)}
         onWillMagnetic={(translateX, translateY, scale, newX, newY, newScale) => this.onWillMagnetic(translateX, translateY, scale, newX, newY, newScale)}
         onPress={e => onPress && onPress(index, e)}
         onLongPress={e => onLongPress && onLongPress(index, e)}

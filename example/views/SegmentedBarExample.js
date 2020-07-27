@@ -20,26 +20,26 @@ export default class SegmentedBarExample extends NavigationPage {
     super(props);
 
     this.barItems = [
-      'Apple',
-      'Banana',
-      'Cherry',
-      'Durian',
+      'Aged Pu\'er',
+      'Bohea',
+      'Chrysanthemum',
+      'Hyson',
     ];
     this.barScrollItems = [
-      'Apple',
-      'Banana',
-      'Cherry',
-      'Durian',
-      'Filbert',
-      'Grape',
-      'Hickory',
-      'Lemon',
-      'Mango',
+      'Aged Pu\'er',
+      'Bohea',
+      'Chrysanthemum',
+      'Hyson',
+      'Jasmine',
+      'Keemun',
+      'Loungjing',
+      'Pekoe',
+      'Tieguanyin',
     ];
     this.barCustomItems = ['Home', 'Store', 'Me'];
 
     this.justifyItemItems = ['fixed', 'scrollable'];
-    this.indicatorTypeItems = ['none', 'boxWidth', 'itemWidth'];
+    this.indicatorTypeItems = ['none', 'boxWidth', 'itemWidth', 'customWidth'];
     this.indicatorPositionItems = ['top', 'bottom'];
 
     Object.assign(this.state, {

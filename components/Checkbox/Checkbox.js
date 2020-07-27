@@ -4,14 +4,13 @@
 
 import React, {Component} from 'react';
 import PropTypes from 'prop-types';
-import {View, Text, Image, TouchableOpacity} from 'react-native';
+import {StyleSheet, Text, Image, TouchableOpacity} from 'react-native';
 
 import Theme from 'teaset/themes/Theme';
 
-export default class Checkbox extends TouchableOpacity {
+export default class Checkbox extends Component {
   
   static propTypes = {
-    ...TouchableOpacity.propTypes,
     checked: PropTypes.bool,
     defaultChecked: PropTypes.bool,
     size: PropTypes.oneOf(['lg', 'md', 'sm']),
@@ -25,7 +24,6 @@ export default class Checkbox extends TouchableOpacity {
   };
 
   static defaultProps = {
-    ...TouchableOpacity.defaultProps,
     defaultChecked: false,
     size: 'md',
     checkedIcon: require('../../icons/checked.png'),
@@ -35,40 +33,23 @@ export default class Checkbox extends TouchableOpacity {
 
   constructor(props) {
     super(props);
-    this.state = Object.assign(this.state, {
+    this.state = {
+      ...this.state,
       checked: props.checked === true || props.checked === false ? props.checked : props.defaultChecked,
-    });
+    };
   }
 
-  componentWillReceiveProps(nextProps) {
-    if (nextProps.checked === true || nextProps.checked === false) {
-      if (nextProps.checked != this.state.checked) {
-        this.setState({checked: nextProps.checked});
+  componentDidUpdate(prevProps) {
+    let {checked, disabled} = this.props;
+    if (checked === true || checked === false) {
+      if (checked !== this.state.checked) {
+        this.setState({checked});
       }
     }
   }
 
-  buildProps() {
-    let {style, size, title, checkedIcon, uncheckedIcon, titleStyle, checkedIconStyle, uncheckedIconStyle, children, onPress, onChange, ...others} = this.props;
-    let {checked} = this.state;
-
-    let iconSize, textFontSize, textPaddingLeft;
-    switch (size) {
-      case 'lg':
-        iconSize = Theme.cbIconSizeLG;
-        textFontSize = Theme.cbFontSizeLG;
-        textPaddingLeft = Theme.cbTitlePaddingLeftLG;
-        break;
-      case 'sm':
-        iconSize = Theme.cbIconSizeSM;
-        textFontSize = Theme.cbFontSizeSM;
-        textPaddingLeft = Theme.cbTitlePaddingLeftSM;
-        break;
-      default:
-        iconSize = Theme.cbIconSizeMD;
-        textFontSize = Theme.cbFontSizeMD;
-        textPaddingLeft = Theme.cbTitlePaddingLeftMD;
-    }
+  buildStyle() {
+    let {style, disabled} = this.props;
 
     style = [{
       backgroundColor: 'rgba(0, 0, 0, 0)',
@@ -76,31 +57,67 @@ export default class Checkbox extends TouchableOpacity {
       flexDirection: 'row',
       alignItems: 'center',
     }].concat(style);
+    style = StyleSheet.flatten(style);
+    if (disabled) {
+      style.opacity = Theme.cbDisabledOpacity;
+    }
+
+    return style;
+  }
+
+  renderIcon() {
+    let {size, checkedIcon, uncheckedIcon, checkedIconStyle, uncheckedIconStyle} = this.props;
+    let {checked} = this.state;
+
+    let iconSize;
+    switch (size) {
+      case 'lg': iconSize = Theme.cbIconSizeLG; break;
+      case 'sm': iconSize = Theme.cbIconSizeSM; break;
+      default: iconSize = Theme.cbIconSizeMD;
+    }
+
     let iconStyle = [{
       tintColor: checked ? Theme.cbCheckedTintColor : Theme.cbUncheckedTintColor,
       width: iconSize,
       height: iconSize,
     }].concat(checked ? checkedIconStyle : uncheckedIconStyle);
-    let textStyle = [{
-      color: Theme.cbTitleColor,
-      fontSize: textFontSize,
-      overflow: 'hidden',
-      paddingLeft: textPaddingLeft,
-    }].concat(titleStyle);
 
-    if (React.isValidElement(checkedIcon)) {
-      checkedIcon = React.cloneElement(checkedIcon, {key: 'icon'});
-    } else if (checkedIcon || checkedIcon === 0) {
+    if (!React.isValidElement(checkedIcon) && (checkedIcon || checkedIcon === 0)) {
       checkedIcon = <Image key='icon' style={iconStyle} source={checkedIcon} />;
     }
-    if (React.isValidElement(uncheckedIcon)) {
-      uncheckedIcon = React.cloneElement(uncheckedIcon, {key: 'icon'});
-    } else if (uncheckedIcon || uncheckedIcon === 0) {
+    if (!React.isValidElement(uncheckedIcon) && (uncheckedIcon || uncheckedIcon === 0)) {
       uncheckedIcon = <Image key='icon' style={iconStyle} source={uncheckedIcon} />;
     }
-    if (React.isValidElement(title)) {
-      title = React.cloneElement(title, {key: 'title'});
-    } else if ((title || title === '' || title === 0)) {
+
+    return checked ? checkedIcon : uncheckedIcon;
+  }
+
+  renderTitle() {
+    let {size, title, titleStyle} = this.props;
+
+    if (!React.isValidElement(title) && (title || title === '' || title === 0)) {
+      let textFontSize, textPaddingLeft;
+      switch (size) {
+        case 'lg':
+          textFontSize = Theme.cbFontSizeLG;
+          textPaddingLeft = Theme.cbTitlePaddingLeftLG;
+          break;
+        case 'sm':
+          textFontSize = Theme.cbFontSizeSM;
+          textPaddingLeft = Theme.cbTitlePaddingLeftSM;
+          break;
+        default:
+          textFontSize = Theme.cbFontSizeMD;
+          textPaddingLeft = Theme.cbTitlePaddingLeftMD;
+      }
+
+      let textStyle = [{
+        color: Theme.cbTitleColor,
+        fontSize: textFontSize,
+        overflow: 'hidden',
+        paddingLeft: textPaddingLeft,
+      }].concat(titleStyle);
+
       title = (
         <Text key='title' style={textStyle} numberOfLines={1}>
           {title}
@@ -108,30 +125,28 @@ export default class Checkbox extends TouchableOpacity {
       );
     }
 
-    children = [
-      checked ? checkedIcon : uncheckedIcon,
-      title ? title : null,
-    ];
-
-    onPress = () => {
-      this.setState({checked: !checked});
-      onChange && onChange(!checked);
-    };
-
-    this.props = {style, size, title, checkedIcon, uncheckedIcon, titleStyle, checkedIconStyle, uncheckedIconStyle, children, onPress, onChange, ...others};
+    return title;
   }
 
   render() {
-    this.buildProps();
-
-    if (this.props.disabled) {
-      return (
-        <View style={{opacity: Theme.cbDisabledOpacity}}>
-          {super.render()}
-        </View>
-      );
-    } else {
-      return super.render();
-    }
+    let {style, children, checked, defaultChecked, size, title, titleStyle, checkedIcon, checkedIconStyle, uncheckedIcon, uncheckedIconStyle, disabled, activeOpacity, onChange, onPress, ...others} = this.props;
+    style = this.buildStyle();
+    if (disabled) activeOpacity = style.opacity;
+    return (
+      <TouchableOpacity
+        style={style}
+        disabled={disabled}
+        activeOpacity={activeOpacity}
+        onPress={e => {
+          this.setState({checked: !checked});
+          onChange && onChange(!checked);
+          onPress && onPress(e);
+        }}
+        {...others}
+      >
+        {this.renderIcon()}
+        {this.renderTitle()}
+      </TouchableOpacity>
+    );
   }
 }

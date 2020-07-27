@@ -22,7 +22,7 @@ export default class NavigationBar extends Component {
     titleStyle: Text.propTypes.style,
     leftView: PropTypes.element,
     rightView: PropTypes.element,
-    tintColor: PropTypes.string, //bar tint color, default tint color leftView and rightView
+    tintColor: PropTypes.string, //bar tint color, default tint color leftView and rightView, set to null for no tint color
     background: PropTypes.element,
     hidden: PropTypes.bool, //bar hidden
     animated: PropTypes.bool, //hide or show bar with animation
@@ -61,30 +61,23 @@ export default class NavigationBar extends Component {
     };
   }
 
-  componentWillReceiveProps(nextProps) {
-    if (nextProps.hidden != this.props.hidden) {
-      this.checkBarHidden(nextProps.hidden, nextProps.animated);
+  componentDidUpdate(prevProps) {
+    if (prevProps.hidden != this.props.hidden) {
+      this.checkBarHidden();
     }
   }
 
   getChildContext() {
-    return {tintColor: this.props.tintColor ? this.props.tintColor : Theme.navTintColor};
+    return {tintColor: this.props.tintColor === undefined ? Theme.navTintColor : this.props.tintColor};
   }
 
-  buildProps() {
-    let {style, type, title, titleStyle, tintColor, hidden, animated, statusBarColor, statusBarStyle, statusBarInsets, ...others} = this.props;
+  buildStyle() {
+    let {style, type, statusBarInsets} = this.props;
 
-    //build style
-    let justifyContent, titleTextAlign;
+    let justifyContent;
     switch (type === 'auto' ? Platform.OS : type) {
-      case 'ios':
-        justifyContent = 'space-between';
-        titleTextAlign = 'center';
-        break;
-      case 'android':
-        justifyContent = 'flex-end';
-        titleTextAlign = 'left';
-        break;
+      case 'ios': justifyContent = 'space-between'; break;
+      case 'android': justifyContent = 'flex-end'; break;
     }
     let {left: leftInset, right: rightInset} = Theme.screenInset;
     style = [{
@@ -100,22 +93,85 @@ export default class NavigationBar extends Component {
       borderBottomColor: Theme.navSeparatorColor,
       flexDirection: 'row',
       alignItems: 'center',
-      justifyContent: justifyContent,
+      justifyContent,
     }].concat(style).concat({
       top: this.state.barTop, //hidden or shown
     });
 
-    let fs = StyleSheet.flatten(style);
+    return style;
+  }
 
-    //build tintColor
-    if (!tintColor) tintColor = Theme.navTintColor;
+  checkBarHidden() {
+    let {hidden, animated} = this.props;
+    let {barTop, barOpacity} = this.state;
+    let barTopValue = hidden ? -this.barHeight : 0;
+    let barOpacityValue = hidden ? 0 : 1;
+    if (barTop._value != barTopValue || barOpacity._value != barOpacityValue) {
+      if (animated) {
+        Animated.parallel([
+          Animated.spring(barTop, {toValue: barTopValue, friction: 9, useNativeDriver: false,}),
+          Animated.spring(barOpacity, {toValue: barOpacityValue, friction: 9, useNativeDriver: false,}),
+        ]).start();
+      } else {
+        barTop.setValue(barTopValue);
+        barOpacity.setValue(barOpacityValue);
+      }      
+    }
+  }
 
-    //build statusBarColor and statusBarStyle
+  onLayout(e) {
+    if (e.nativeEvent.layout.height != this.barHeight) {
+      this.barHeight = e.nativeEvent.layout.height;
+      this.checkBarHidden();
+    }
+    let {width} = Dimensions.get('window');
+    if (width != this.screenWidth) {
+      this.screenWidth = width;
+      this.forceUpdate();
+    }
+    this.props.onLayout && this.props.onLayout(e);
+  }
+
+  onLeftViewLayout(e) {
+    if (e.nativeEvent.layout.width != this.state.leftViewWidth) {
+      this.setState({leftViewWidth: e.nativeEvent.layout.width});
+    }
+  }
+
+  onRightViewLayout(e) {
+    if (e.nativeEvent.layout.width != this.state.rightViewWidth) {
+      this.setState({rightViewWidth: e.nativeEvent.layout.width});
+    }
+  }
+
+  renderStatusBar(fs) {
+    let {statusBarColor, statusBarStyle, statusBarHidden, statusBarInsets, animated} = this.props;
+
     if (!statusBarColor) statusBarColor = statusBarInsets && (Platform.OS === 'ios' || Platform.Version > 20) ? 'rgba(0,0,0,0)' : fs.backgroundColor;
     if (!statusBarStyle) statusBarStyle = Theme.navStatusBarStyle ? Theme.navStatusBarStyle : 'default';
 
-    //build titleViewStyle
+    return (
+      <StatusBar backgroundColor={statusBarColor} translucent={true} barStyle={statusBarStyle} animated={animated} hidden={statusBarHidden} />
+    );
+  }
+
+  renderBackground() {
+    let backgroundViewStyle = {
+      backgroundColor: 'rgba(0, 0, 0, 0)',
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      opacity: this.state.barOpacity,
+    };
+    return <Animated.View style={backgroundViewStyle}>{this.props.background}</Animated.View>;
+  }
+
+  renderTitle(fs) {
+    let {type, title, titleStyle, statusBarInsets} = this.props;
     let {leftViewWidth, rightViewWidth} = this.state;
+
     let barPaddingLeft = fs.paddingLeft ? fs.paddingLeft : (fs.padding ? fs.padding : 0);
     let barPaddingRight = fs.paddingRight ? fs.paddingRight : (fs.padding ? fs.padding : 0);
     let paddingLeft, paddingRight;
@@ -145,81 +201,42 @@ export default class NavigationBar extends Component {
       justifyContent: 'center',
     };
 
-    //build leftView and rightView style
-    let leftRightViewStyle = {opacity: this.state.barOpacity};
-
     //convert string title to NavigationBar.Title
     if (typeof title === 'string') {
-      title = <this.constructor.Title style={[{textAlign: titleTextAlign, color: Theme.navTitleColor}].concat(titleStyle)} text={title} />;
+      let textAlign;
+      switch (type === 'auto' ? Platform.OS : type) {
+        case 'ios': textAlign = 'center'; break;
+        case 'android': textAlign = 'left'; break;
+      }
+      title = <this.constructor.Title style={[{textAlign, color: Theme.navTitleColor}].concat(titleStyle)} text={title} />;
     }
 
-    //build backgroundView style
-    let backgroundViewStyle = {
-      backgroundColor: 'rgba(0, 0, 0, 0)',
-      position: 'absolute',
-      top: 0,
-      left: 0,
-      right: 0,
-      bottom: 0,
-      opacity: this.state.barOpacity,
-    };
-
-    return ({style, type, title, titleStyle, tintColor, titleViewStyle, leftRightViewStyle, backgroundViewStyle, hidden, animated, statusBarColor, statusBarStyle, statusBarInsets, ...others});
+    return <Animated.View style={titleViewStyle}>{title}</Animated.View>;
   }
 
-  checkBarHidden(hidden, animated) {
-    let {barTop, barOpacity} = this.state;
-    let barTopValue = hidden ? -this.barHeight : 0;
-    let barOpacityValue = hidden ? 0 : 1;
-    if (barTop._value != barTopValue || barOpacity._value != barOpacityValue) {
-      if (animated) {
-        Animated.parallel([
-          Animated.spring(barTop, {toValue: barTopValue, friction: 9}),
-          Animated.spring(barOpacity, {toValue: barOpacityValue, friction: 9}),
-        ]).start();
-      } else {
-        barTop.setValue(barTopValue);
-        barOpacity.setValue(barOpacityValue);
-      }      
-    }
+  renderLeftView() {
+    let {leftView} = this.props;
+    let {barOpacity: opacity} = this.state;
+    return <Animated.View style={{opacity}} onLayout={e => this.onLeftViewLayout(e)}>{leftView}</Animated.View>;
   }
 
-  onLayout(e) {
-    if (e.nativeEvent.layout.height != this.barHeight) {
-      this.barHeight = e.nativeEvent.layout.height;
-      this.checkBarHidden(this.props.hidden, this.props.animated);
-    }
-    let {width} = Dimensions.get('window');
-    if (width != this.screenWidth) {
-      this.screenWidth = width;
-      this.forceUpdate();
-    }
-    this.props.onLayout && this.props.onLayout(e);
-  }
-
-  onLeftViewLayout(e) {
-    if (e.nativeEvent.layout.width != this.state.leftViewWidth) {
-      this.setState({leftViewWidth: e.nativeEvent.layout.width});
-    }
-  }
-
-  onRightViewLayout(e) {
-    if (e.nativeEvent.layout.width != this.state.rightViewWidth) {
-      this.setState({rightViewWidth: e.nativeEvent.layout.width});
-    }
+  renderRightView() {
+    let {rightView} = this.props;
+    let {barOpacity: opacity} = this.state;
+    return <Animated.View style={{opacity}} onLayout={e => this.onRightViewLayout(e)}>{rightView}</Animated.View>;
   }
 
   render() {
-    let {style, animated, statusBarStyle, statusBarColor, statusBarHidden, title, titleViewStyle, leftRightViewStyle, leftView, rightView, background, backgroundViewStyle, ...others} = this.buildProps();
+    let {style, children, type, title, titleStyle, leftView, rightView, tintColor, background, hidden, animated, statusBarStyle, statusBarColor, statusBarHidden, statusBarInsets, onLayout, ...others} = this.props;
+    let fs = StyleSheet.flatten(this.buildStyle());
     return (
-      <Animated.View style={style} {...others} onLayout={e => this.onLayout(e)}>
-        <StatusBar backgroundColor={statusBarColor} translucent={true} barStyle={statusBarStyle} animated={animated} hidden={statusBarHidden} />
-        <Animated.View style={backgroundViewStyle}>{background}</Animated.View>
-        <Animated.View style={titleViewStyle}>{title}</Animated.View>
-        <Animated.View style={leftRightViewStyle} onLayout={e => this.onLeftViewLayout(e)}>{leftView}</Animated.View>
-        <Animated.View style={leftRightViewStyle} onLayout={e => this.onRightViewLayout(e)}>{rightView}</Animated.View>
+      <Animated.View style={fs} onLayout={e => this.onLayout(e)} {...others}>
+        {this.renderStatusBar(fs)}
+        {this.renderBackground()}
+        {this.renderTitle(fs)}
+        {this.renderLeftView()}
+        {this.renderRightView()}
       </Animated.View>
     );
   }
 }
-
